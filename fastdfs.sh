@@ -72,36 +72,61 @@ echo "chkconfig fdfs_trackerd on"
 echo "/etc/init.d/fdfs_storaged start"
 echo "chkconfig fdfs_storaged on"
 
+#############################################tracker######################################################
+
 # configure tracker
 mkdir -p /data/fastdfs
-echo "base_path=/data/fastdfs/" > /etc/fdfs/tracker.conf
+sed -i "s/base_path=\/home\/yuqing\/fastdfs/base_path=\/data\/fastdfs/g" /etc/fdfs/tracker.conf
+
+#############################################storage####################################################
 
 # configure storage
-echo "base_path=/data/fastdfs/" > /etc/fdfs/storage.conf
-echo "store_path0=/data/fastdfs/" > /etc/fdfs/storage.conf
+sed -i "s/base_path=\/home\/yuqing\/fastdfs/base_path=\/data\/fastdfs/g" /etc/fdfs/storage.conf
+sed -i "s/store_path0=\/home\/yuqing\/fastdfs/store_path0=\/data\/fastdfs/g" /etc/fdfs/storage.conf
 ip=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:"`
-echo "tracker_server=$ip:22122" > /etc/fdfs/storage.conf
+sed -i "s/tracker_server=192.168.209.121:22122/tracker_server=$ip:22122/g" /etc/fdfs/storage.conf
+sed -i "s/tracker_server=192.168.209.122:22122/\#tracker_server=$ip:22122/g" /etc/fdfs/storage.conf
+
 chkconfig fdfs_trackerd on
 chkconfig fdfs_storaged on
 /etc/init.d/fdfs_trackerd start
 /etc/init.d/fdfs_storaged start
 
+############################################nginx######################################################
+
 # configure nginx
-echo "tracker_server=$ip:22122" > /etc/fdfs/mod_fastdfs.conf
-echo "url_have_group_name=true" > /etc/fdfs/mod_fastdfs.conf
-echo "store_path0=/data/fastdfs" > /etc/fdfs/mod_fastdfs.conf
+sed -i "s/base_path=\/tmp/base_path=\/data\/fastdfs/g" /etc/fdfs/mod_fastdfs.conf
+sed -i "s/tracker_server=tracker:22122/tracker_server=$ip:22122/g" /etc/fdfs/mod_fastdfs.conf
+sed -i "s/url_have_group_name = false/url_have_group_name=true/g" /etc/fdfs/mod_fastdfs.conf
+sed -i "s/store_path0=\/home\/yuqing\/fastdfs/store_path0=\/data\/fastdfs/g" /etc/fdfs/mod_fastdfs.conf
+
+
+#echo "tracker_server=$ip:22122" >> /etc/fdfs/mod_fastdfs.conf
+#echo "url_have_group_name=true" >> /etc/fdfs/mod_fastdfs.conf
+#echo "store_path0=/data/fastdfs" >> /etc/fdfs/mod_fastdfs.conf
+
+###########################################client#######################################################
+# configure client
+sed -i "s/base_path=\/home\/yuqing\/fastdfs/base_path=\/data\/fastdfs/g" /etc/fdfs/client.conf
+sed -i "s/tracker_server=192.168.0.196:22122/tracker_server=$ip:22122/g" /etc/fdfs/client.conf
+sed -i "s/tracker_server=192.168.0.197:22122/\#tracker_server=$ip:22122/g" /etc/fdfs/client.conf
+#echo "base_path=/data/fastdfs" >> /etc/fdfs/client.conf
+#echo "tracker_server=$ip:22122" >> /etc/fdfs/client.conf
+
+#######################################################################################################
+
 
 echo "server {
-    listen       8888;
-    server_name  localhost;
-    location ~/group[0-9]/ {
-        ngx_fastdfs_module;
-    }
-    error_page   500 502 503 504  /50x.html;
-    location = /50x.html {
-    root   html;
-    }
-}" > nginx_modify.txt
+          listen       8888;
+          server_name  localhost;
+          location ~/group[0-9]/ {
+              ngx_fastdfs_module;
+          }
+          error_page   500 502 503 504  /50x.html;
+          location = /50x.html {
+              root   html;
+          }
+      }" > nginx_modify.txt
 sed -i "34r nginx_modify.txt" /usr/local/nginx/conf/nginx.conf
 
 rm -rf nginx_modify.txt
